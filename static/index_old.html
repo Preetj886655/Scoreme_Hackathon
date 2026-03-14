@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Workflow Decision Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --green: #00e5a0;
+    --yellow: #ffd166;
+    --red: #ff4d6d;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent2); }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--green);
+  }
+  .status-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--surface); padding: 4px; border-radius: 10px; width: fit-content; }
+  .tab {
+    padding: 8px 20px; border-radius: 8px; border: none;
+    font-family: var(--sans); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    background: transparent; color: var(--muted);
+  }
+  .tab.active { background: var(--accent); color: white; }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* PANELS */
+  .panel { display: none; animation: fadeIn 0.25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .field input, .field select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+
+  .field-full { grid-column: 1/-1; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 12px 28px; border-radius: 8px; border: none;
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.2px;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #5a52e0; transform: translateY(-1px); }
+  .btn-primary:active { transform: none; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-sm { padding: 7px 14px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  .btn-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* RESULT BOX */
+  #result-box { margin-top: 24px; }
+  .result-card {
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid;
+    animation: fadeIn 0.3s ease;
+  }
+  .result-card.approved { background: rgba(0,229,160,0.06); border-color: rgba(0,229,160,0.3); }
+  .result-card.reject { background: rgba(255,77,109,0.06); border-color: rgba(255,77,109,0.3); }
+  .result-card.manual_review { background: rgba(255,209,102,0.06); border-color: rgba(255,209,102,0.3); }
+  .result-card.retry { background: rgba(108,99,255,0.06); border-color: rgba(108,99,255,0.3); }
+
+  .result-status {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 22px; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .result-status .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .approved .dot { background: var(--green); }
+  .reject .dot { background: var(--red); }
+  .manual_review .dot { background: var(--yellow); }
+  .retry .dot { background: var(--accent); }
+
+  .result-reason { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .result-id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* AUDIT TRAIL */
+  .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .audit-table th {
+    text-align: left; padding: 10px 12px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .audit-table td { padding: 10px 12px; border-bottom: 1px solid rgba(42,42,61,0.5); }
+  .audit-table tr:last-child td { border-bottom: none; }
+
+  .badge {
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-family: var(--mono); font-weight: 700;
+  }
+  .badge.passed { background: rgba(0,229,160,0.12); color: var(--green); }
+  .badge.failed { background: rgba(255,77,109,0.12); color: var(--red); }
+  .badge.skipped { background: rgba(107,107,138,0.15); color: var(--muted); }
+
+  /* WORKFLOW CARDS */
+  .workflow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 16px; }
+  .workflow-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .workflow-card:hover { border-color: var(--accent); }
+  .wf-name { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-bottom: 6px; }
+  .wf-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .rule-pill {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    margin: 3px;
+    color: var(--text);
+  }
+
+  /* REQUEST LIST */
+  .req-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .req-wf { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .req-id { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* STATUS BADGES */
+  .status-badge {
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-family: var(--mono); font-weight: 700;
+  }
+  .status-badge.approved { background: rgba(0,229,160,0.12); color: var(--green); }
+  .status-badge.reject { background: rgba(255,77,109,0.12); color: var(--red); }
+  .status-badge.manual_review { background: rgba(255,209,102,0.12); color: var(--yellow); }
+  .status-badge.retry { background: rgba(108,99,255,0.12); color: var(--accent); }
+  .status-badge.pending { background: rgba(107,107,138,0.15); color: var(--muted); }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(108,99,255,0.04); }
+  .upload-zone p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  /* LOADER */
+  .loader {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.6s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* CODE */
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: #a8b5ff;
+    margin-top: 12px;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 100;
+    max-width: 320px;
+  }
+  #toast.show { transform: none; opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">workflow<span>.</span>engine</div>
+      <div class="status-pill" id="health-status">connecting...</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('submit')">Submit Request</button>
+    <button class="tab" onclick="switchTab('workflows')">Workflows</button>
+    <button class="tab" onclick="switchTab('requests')">All Requests</button>
+    <button class="tab" onclick="switchTab('audit')">Audit Lookup</button>
+    <button class="tab" onclick="switchTab('upload')">Upload Config</button>
+  </div>
+
+  <!-- SUBMIT PANEL -->
+  <div class="panel active" id="panel-submit">
+    <div class="card">
+      <div class="card-title">// new workflow request</div>
+      <div class="form-grid">
+        <div class="field field-full">
+          <label>WORKFLOW</label>
+          <select id="workflow-select">
+            <option value="">Loading workflows...</option>
+          </select>
+        </div>
+        <div class="field field-full">
+          <label>IDEMPOTENCY KEY <span style="color:var(--muted)">(optional — leave blank to auto-generate)</span></label>
+          <input type="text" id="idem-key" placeholder="e.g. user-123-request-456"/>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <div class="card-title">// input data (fill fields for selected workflow)</div>
+        <div id="dynamic-fields" class="form-grid"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitRequest()">
+          <span id="submit-label">Submit Request</span>
+        </button>
+        <button class="btn btn-secondary" onclick="fillExample()">Fill Example</button>
+      </div>
+    </div>
+
+    <div id="result-box"></div>
+  </div>
+
+  <!-- WORKFLOWS PANEL -->
+  <div class="panel" id="panel-workflows">
+    <div class="card-title" style="margin-bottom:16px">// available workflows</div>
+    <div id="workflow-grid" class="workflow-grid"></div>
+  </div>
+
+  <!-- REQUESTS PANEL -->
+  <div class="panel" id="panel-requests">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-title">// recent requests</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadRequests()">Refresh</button>
+    </div>
+    <div id="requests-list"></div>
+  </div>
+
+  <!-- AUDIT PANEL -->
+  <div class="panel" id="panel-audit">
+    <div class="card">
+      <div class="card-title">// audit trail lookup</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <input type="text" id="audit-id-input" placeholder="Enter Request ID..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none"/>
+        <button class="btn btn-primary" onclick="lookupAudit()">Lookup</button>
+      </div>
+    </div>
+    <div id="audit-result"></div>
+  </div>
+
+  <!-- UPLOAD PANEL -->
+  <div class="panel" id="panel-upload">
+    <div class="card">
+      <div class="card-title">// upload custom config</div>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:20px">
+        Upload any YAML or JSON workflow config. If the format doesn't match our schema, Gemini AI will automatically convert it.
+      </p>
+      <div class="upload-zone" onclick="document.getElementById('config-file').click()">
+        <div style="font-size:32px">📁</div>
+        <p>Click to upload YAML or JSON config file</p>
+        <p style="font-size:12px;margin-top:4px">Supports any format — Gemini handles conversion</p>
+      </div>
+      <input type="file" id="config-file" accept=".yaml,.yml,.json" style="display:none" onchange="uploadConfig(this)"/>
+      <div id="upload-result" style="margin-top:16px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">// expected config format</div>
+      <pre>{
+  "workflow_name": "my_workflow",
+  "description": "What this workflow does",
+  "steps": ["validate_input", "evaluate_rules", "final_decision"],
+  "rules": [
+    {
+      "name": "rule_name",
+      "field": "input_field_name",
+      "operator": ">=",
+      "value": 100,
+      "on_fail": "reject",
+      "message": "Human readable failure reason"
+    }
+  ],
+  "external_dependency": {
+    "name": "my_api",
+    "simulate": true,
+    "failure_action": "retry"
+  }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '';
+let workflowDefs = {};
+
+// ── FIELD DEFINITIONS per workflow ──
+const WORKFLOW_FIELDS = {
+  loan_approval: [
+    { id: 'age', label: 'Age', type: 'number', placeholder: '30' },
+    { id: 'credit_score', label: 'Credit Score', type: 'number', placeholder: '720' },
+    { id: 'annual_income', label: 'Annual Income (₹)', type: 'number', placeholder: '60000' },
+    { id: 'existing_debt', label: 'Existing Debt (₹)', type: 'number', placeholder: '10000' },
+    { id: 'loan_amount', label: 'Loan Amount (₹)', type: 'number', placeholder: '100000' }
+  ],
+  employee_onboarding: [
+    { id: 'age', label: 'Age', type: 'number', placeholder: '25' },
+    { id: 'years_of_experience', label: 'Years of Experience', type: 'number', placeholder: '3' },
+    { id: 'offered_salary', label: 'Offered Salary (₹)', type: 'number', placeholder: '45000' },
+    { id: 'department_current_headcount', label: 'Dept. Headcount', type: 'number', placeholder: '10' }
+  ]
+};
+
+const EXAMPLES = {
+  loan_approval: { age: 30, credit_score: 720, annual_income: 60000, existing_debt: 10000, loan_amount: 100000 },
+  employee_onboarding: { age: 25, years_of_experience: 3, offered_salary: 45000, department_current_headcount: 10 }
+};
+
+// ── INIT ──
+window.onload = async () => {
+  await checkHealth();
+  await loadWorkflows();
+};
+
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/health`);
+    const d = await r.json();
+    const el = document.getElementById('health-status');
+    el.textContent = `online · ${d.loaded_workflows.length} workflow(s)`;
+  } catch {
+    document.getElementById('health-status').textContent = 'offline';
+  }
+}
+
+async function loadWorkflows() {
+  try {
+    const r = await fetch(`${API}/workflows`);
+    workflowDefs = await r.json();
+
+    const sel = document.getElementById('workflow-select');
+    sel.innerHTML = Object.keys(workflowDefs).map(k =>
+      `<option value="${k}">${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`
+    ).join('');
+
+    sel.onchange = () => renderFields(sel.value);
+    renderFields(sel.value);
+    renderWorkflowGrid();
+  } catch(e) {
+    showToast('Could not load workflows — is the server running?');
+  }
+}
+
+function renderFields(workflowName) {
+  const container = document.getElementById('dynamic-fields');
+  const fields = WORKFLOW_FIELDS[workflowName] || [];
+  container.innerHTML = fields.map(f => `
+    <div class="field">
+      <label>${f.label.toUpperCase()}</label>
+      <input type="${f.type}" id="field-${f.id}" placeholder="${f.placeholder}"/>
+    </div>
+  `).join('');
+}
+
+function fillExample() {
+  const wf = document.getElementById('workflow-select').value;
+  const ex = EXAMPLES[wf] || {};
+  Object.entries(ex).forEach(([k, v]) => {
+    const el = document.getElementById(`field-${k}`);
+    if(el) el.value = v;
+  });
+}
+
+async function submitRequest() {
+  const wf = document.getElementById('workflow-select').value;
+  const idemKey = document.getElementById('idem-key').value.trim();
+  const fields = WORKFLOW_FIELDS[wf] || [];
+
+  const inputData = {};
+  for(const f of fields) {
+    const el = document.getElementById(`field-${f.id}`);
+    if(el && el.value !== '') {
+      inputData[f.id] = f.type === 'number' ? parseFloat(el.value) : el.value;
+    }
+  }
+
+  const payload = { workflow_name: wf, input_data: inputData };
+  if(idemKey) payload.idempotency_key = idemKey;
+
+  const label = document.getElementById('submit-label');
+  label.innerHTML = '<span class="loader"></span> Processing...';
+
+  try {
+    const r = await fetch(`${API}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    renderResult(data);
+  } catch(e) {
+    showToast('Request failed — is the server running?');
+  } finally {
+    label.textContent = 'Submit Request';
+  }
+}
+
+function renderResult(data) {
+  const statusClass = data.status === 'reject' ? 'reject' :
+                      data.status === 'approved' ? 'approved' :
+                      data.status === 'manual_review' ? 'manual_review' : 'retry';
+
+  const icon = { approved: '✅', reject: '❌', manual_review: '🔍', retry: '🔄' }[data.status] || '⚠️';
+
+  const auditRows = (data.audit_trail || []).map(a => `
+    <tr>
+      <td>${a.step || '—'}</td>
+      <td>${a.rule || a.rule_name || '—'}</td>
+      <td>${a.field || '—'}</td>
+      <td><span class="badge ${a.result}">${a.result}</span></td>
+      <td style="color:var(--muted);font-size:12px">${a.reason || '—'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('result-box').innerHTML = `
+    <div class="result-card ${statusClass}">
+      <div class="result-status">
+        <div class="dot"></div>
+        ${icon} ${data.status.replace(/_/g,' ').toUpperCase()}
+        ${data.duplicate ? '<span style="font-size:12px;color:var(--yellow);margin-left:8px">DUPLICATE</span>' : ''}
+      </div>
+      <div class="result-reason">${data.reason || ''}</div>
+      <div class="result-id">REQUEST ID: ${data.request_id}</div>
+      ${data.failed_rule ? `<div class="result-id" style="margin-top:4px">FAILED RULE: ${data.failed_rule}</div>` : ''}
+
+      ${auditRows ? `
+        <div style="margin-top:20px;overflow-x:auto">
+          <table class="audit-table">
+            <thead><tr><th>Step</th><th>Rule</th><th>Field</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody>${auditRows}</tbody>
+          </table>
+        </div>
+      ` : ''}
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${data.request_id}')">Copy ID</button>
+        <button class="btn btn-secondary btn-sm" onclick="setAuditId('${data.request_id}')">Full Audit →</button>
+        ${data.status === 'retry' ? `<button class="btn btn-primary btn-sm" onclick="retryRequest('${data.request_id}')">Retry Now</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+async function retryRequest(id) {
+  try {
+    const r = await fetch(`${API}/retry/${id}`, { method: 'POST' });
+    const data = await r.json();
+    if(r.ok) renderResult(data);
+    else showToast(data.detail || 'Retry failed');
+  } catch { showToast('Retry request failed'); }
+}
+
+function renderWorkflowGrid() {
+  const grid = document.getElementById('workflow-grid');
+  grid.innerHTML = Object.entries(workflowDefs).map(([name, wf]) => `
+    <div class="workflow-card">
+      <div class="wf-name">${name}</div>
+      <div class="wf-desc">${wf.description || 'No description'}</div>
+      <div style="margin-bottom:10px">
+        ${(wf.rules||[]).map(r => `<span class="rule-pill">${r.name}</span>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${(wf.steps||[]).join(' → ')}</div>
+    </div>
+  `).join('');
+}
+
+async function loadRequests() {
+  try {
+    const r = await fetch(`${API}/requests`);
+    const data = await r.json();
+    const list = document.getElementById('requests-list');
+    if(!data.length) { list.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:20px">No requests yet.</div>'; return; }
+    list.innerHTML = data.map(req => `
+      <div class="req-item">
+        <div>
+          <div class="req-wf">${req.workflow}</div>
+          <div class="req-id">${req.request_id}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="status-badge ${req.status}">${req.status}</span>
+          <button class="btn btn-secondary btn-sm" onclick="setAuditId('${req.request_id}')">Audit</button>
+          ${req.status === 'retry' ? `<button class="btn btn-primary btn-sm" onclick="retryRequest('${req.request_id}')">Retry</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch { showToast('Could not load requests'); }
+}
+
+async function lookupAudit() {
+  const id = document.getElementById('audit-id-input').value.trim();
+  if(!id) { showToast('Enter a request ID'); return; }
+  try {
+    const r = await fetch(`${API}/audit/${id}`);
+    if(!r.ok) { showToast('Request not found'); return; }
+    const data = await r.json();
+    renderAuditDetail(data);
+  } catch { showToast('Audit lookup failed'); }
+}
+
+function renderAuditDetail(data) {
+  const ruleRows = (data.rule_evaluations||[]).map(l => `
+    <tr>
+      <td>${l.step}</td><td>${l.rule||'—'}</td><td>${l.field||'—'}</td>
+      <td>${l.expected||'—'}</td><td>${l.actual||'—'}</td>
+      <td><span class="badge ${l.result}">${l.result}</span></td>
+      <td style="color:var(--muted);font-size:12px">${l.reason||'—'}</td>
+    </tr>
+  `).join('');
+
+  const stateRows = (data.state_history||[]).map(h => `
+    <tr>
+      <td style="color:var(--muted)">${h.from||'—'}</td>
+      <td>→</td>
+      <td><span class="status-badge ${h.to}">${h.to}</span></td>
+      <td style="color:var(--muted);font-size:12px">${h.reason||'—'}</td>
+      <td style="color:var(--muted);font-size:11px;font-family:var(--mono)">${new Date(h.timestamp).toLocaleTimeString()}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('audit-result').innerHTML = `
+    <div class="card">
+      <div class="card-title">// rule evaluations</div>
+      <div style="overflow-x:auto">
+        <table class="audit-table">
+          <thead><tr><th>Step</th><th>Rule</th><th>Field</th><th>Expected</th><th>Actual</th><th>Result</th><th>Reason</th></tr></thead>
+          <tbody>${ruleRows || '<tr><td colspan="7" style="color:var(--muted)">No rule logs</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">// state history</div>
+      <div style="overflow-x:auto">
+        <table class="audit-table">
+          <thead><tr><th>From</th><th></th><th>To</th><th>Reason</th><th>Time</th></tr></thead>
+          <tbody>${stateRows || '<tr><td colspan="5" style="color:var(--muted)">No state history</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+async function uploadConfig(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  const result = document.getElementById('upload-result');
+  result.innerHTML = '<div style="color:var(--muted);font-size:14px">⏳ Uploading and validating...</div>';
+  try {
+    const r = await fetch(`${API}/upload-config`, { method: 'POST', body: form });
+    const data = await r.json();
+    if(r.ok) {
+      result.innerHTML = `<div style="color:var(--green);font-size:14px">✅ ${data.message}</div>`;
+      await loadWorkflows();
+    } else {
+      result.innerHTML = `<div style="color:var(--red);font-size:13px">❌ ${data.detail}</div>`;
+    }
+  } catch { result.innerHTML = '<div style="color:var(--red);font-size:13px">Upload failed</div>'; }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+  if(name === 'requests') loadRequests();
+}
+
+function setAuditId(id) {
+  document.getElementById('audit-id-input').value = id;
+  document.querySelectorAll('.tab')[3].click();
+  setTimeout(lookupAudit, 100);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text);
+  showToast('Request ID copied!');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+workflow_name: loan_approval
+description: "Evaluates loan applications based on credit score, income, and loan amount"
+
+steps:
+  - validate_input
+  - check_external_credit_bureau
+  - evaluate_rules
+  - final_decision
+
+rules:
+  - name: minimum_age
+    field: age
+    operator: ">="
+    value: 18
+    on_fail: reject
+    message: "Applicant must be at least 18 years old"
+
+  - name: minimum_credit_score
+    field: credit_score
+    operator: ">="
+    value: 600
+    on_fail: reject
+    message: "Credit score must be at least 600"
+
+  - name: minimum_income
+    field: annual_income
+    operator: ">="
+    value: 25000
+    on_fail: reject
+    message: "Annual income must be at least 25,000"
+
+  - name: debt_to_income_ratio
+    field: existing_debt
+    operator: "<="
+    value: 40000
+    on_fail: manual_review
+    message: "High existing debt flagged for manual review"
+
+  - name: loan_amount_limit
+    field: loan_amount
+    operator: "<="
+    value: 500000
+    on_fail: reject
+    message: "Loan amount exceeds maximum limit of 500,000"
+
+external_dependency:
+  name: credit_bureau_api
+  simulate: true
+  failure_action: retry

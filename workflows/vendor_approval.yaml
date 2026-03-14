@@ -1,0 +1,43 @@
+description: Evaluate and approve new vendor registrations
+external_dependency:
+  failure_action: retry
+  name: legal_database_api
+  simulate: true
+rules:
+- field: years_in_business
+  message: Vendor must have been in business for at least 3 years
+  name: years_in_business_check
+  on_fail: reject
+  operator: '>='
+  value: 3
+- field: annual_revenue
+  message: Vendor annual revenue must be at least 100,000
+  name: annual_revenue_check
+  on_fail: reject
+  operator: '>='
+  value: 100000
+- field: compliance_score
+  message: Low compliance score flagged for manual review
+  name: compliance_score_check
+  on_fail: manual_review
+  operator: '>='
+  value: 70
+- field: legal_cases
+  message: Vendor must have no outstanding legal cases
+  name: outstanding_legal_cases
+  on_fail: reject
+  operator: ==
+  value: 0
+- field: employee_count
+  message: Vendor must have at least 5 employees
+  name: employee_count_check
+  on_fail: reject
+  operator: '>='
+  value: 5
+steps:
+- intake
+- background_check
+- financial_review
+- compliance_check
+- decision
+workflow_name: vendor_approval

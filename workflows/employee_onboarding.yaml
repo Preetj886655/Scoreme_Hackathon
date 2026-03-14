@@ -1,0 +1,42 @@
+workflow_name: employee_onboarding
+description: "Validates new employee onboarding requests"
+
+steps:
+  - validate_input
+  - check_hr_system
+  - evaluate_rules
+  - final_decision
+
+rules:
+  - name: minimum_age
+    field: age
+    operator: ">="
+    value: 18
+    on_fail: reject
+    message: "Employee must be at least 18 years old"
+
+  - name: valid_experience_years
+    field: years_of_experience
+    operator: ">="
+    value: 0
+    on_fail: reject
+    message: "Years of experience cannot be negative"
+
+  - name: salary_range_check
+    field: offered_salary
+    operator: ">="
+    value: 15000
+    on_fail: reject
+    message: "Offered salary is below minimum wage threshold"
+
+  - name: department_headcount
+    field: department_current_headcount
+    operator: "<="
+    value: 50
+    on_fail: manual_review
+    message: "Department headcount is high — flagged for HR manual review"
+
+external_dependency:
+  name: hr_system_api
+  simulate: true
+  failure_action: retry
