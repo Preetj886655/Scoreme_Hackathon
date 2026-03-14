@@ -86,9 +86,16 @@ You should see this in the terminal:
 
 Go to http://localhost:8000
 
+## UI Interface
 
+![UI Interface](static/{15BCF4DF-BB19-4CC7-A62A-39EA2D5F45BB}.png)
 
-    
+![UI Interface](static/{0BB9ACF6-7BB7-4FAD-833F-166B9797378E}.png)
+
+![UI Interface](static/{4DEB35AC-A837-4466-BDA3-019996687761}.png)
+
+![UI Interface](static/{D24B733F-5909-4083-BAEF-C7370FA9DAF9}.png)
+
 ---
 
 ## Running tests
