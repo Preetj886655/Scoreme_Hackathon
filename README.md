@@ -96,6 +96,8 @@ Go to http://localhost:8000
 
 ![UI Interface](static/{D24B733F-5909-4083-BAEF-C7370FA9DAF9}.png)
 
+![UI Interface](static/{46FEEA17-96D5-4403-95E9-602552919A3E}.png)
+
 ---
 
 ## Running tests
